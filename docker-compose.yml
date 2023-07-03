@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  postgresql:
+    container_name: postgresql
+    image: postgres:alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./migrations/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+      - ./migrations/dbdata:/data/postgres
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: ordersDB
+      PG_DATA: /data/postgres
+    command: ["postgres", "-c", "log_statement=all"]
+
+  stan:
+    container_name: stanserver
+    image: nats-streaming:0.24.6
+    ports:
+      - "4223:4222"
+      - "8223:8222"
+    command:
+      - "--cluster_id"
+      - "test-cluster"
+  
+  memcached:
+    container_name: memcached
+    image: memcached:1.6.21-alpine
+    ports:
+      - 11211:11211
+  
+  main:
+    container_name: main_service
+    ports:
+      - "8080:8080"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - postgresql
+      - stan
+      - memcached
